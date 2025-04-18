@@ -41,6 +41,10 @@
     <div id="app"></div>
     <script>
         (() => {
+            // 检测是否为移动设备
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) return; // 如果是移动设备，直接退出不执行任何功能
+
             var CURSOR;
 
             Math.lerp = (a, b, n) => (1 - n) * a + n * b;
@@ -90,6 +94,7 @@
                 refresh() {
                     this.scr.remove();
                     this.cursor.classList.remove("hover");
+                    this.cursor.classList.remove("active");
                     this.pos = { curr: null, prev: null };
                     this.pt = [];
 
@@ -114,16 +119,8 @@
                     document.onmouseenter = (e) =>
                         this.cursor.classList.remove("hidden");
                     document.onmouseleave = (e) => this.cursor.classList.add("hidden");
-
-                    // 恢复鼠标按下特效（但不使用active类）
-                    document.onmousedown = (e) => {
-                        // 鼠标按下时缩小光标
-                        this.cursor.style.transform = "scale(0.75)";
-                    };
-                    document.onmouseup = (e) => {
-                        // 鼠标释放时恢复原大小
-                        this.cursor.style.transform = "scale(1)";
-                    };
+                    document.onmousedown = (e) => this.cursor.classList.add("active");
+                    document.onmouseup = (e) => this.cursor.classList.remove("active");
                 }
 
                 render() {
