@@ -55,29 +55,6 @@ function mergeIncidents(list, monitors) {
   return map
 }
 
-// 【修复问题2】并发拉取单个 monitor 的响应时间统计（限流 + 容错）
-async function fetchAllResponseTimes(apiKey, monitorIds) {
-  const out = new Map()
-  if (!apiKey || !monitorIds?.length) return out
-  // 简单信号量限流，避免触发 UptimeRobot 速率限制
-  const concurrency = 4
-  let idx = 0
-  const worker = async () => {
-    while (idx < monitorIds.length) {
-      const id = monitorIds[idx++]
-      try {
-        const data = await get(apiKey, `${API}/monitors/${id}/stats/response-time?includeTimeSeries=true`)
-        out.set(id, data)
-      } catch (e) {
-        // 单个失败不影响整体；保留为 null，前端仍可按原逻辑按需加载
-        out.set(id, null)
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, monitorIds.length) }, worker))
-  return out
-}
-
 export async function fetchMonitorStatus({ apiKey } = {}) {
   const key = keyOf({ apiKey })
   if (!key) throw new Error('缺少 API Key')
@@ -87,13 +64,11 @@ export async function fetchMonitorStatus({ apiKey } = {}) {
     paginate(key, `/incidents?started_after=${encodeURIComponent(since)}`)
   ])
   const byMonitor = mergeIncidents(incidents, monitors)
-  // 【修复问题2】列表阶段即拉取各 monitor 的响应时间统计
-  const rtMap = await fetchAllResponseTimes(key, monitors.map((m) => m.id))
   return {
     monitors: monitors.map((m) => ({
       ...m,
       incidents: byMonitor.get(m.id) || [],
-      responseTimeStats: rtMap.get(m.id) || null
+      responseTimeStats: null
     }))
   }
 }

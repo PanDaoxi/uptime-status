@@ -9,6 +9,7 @@ export const isMonitorWarning = (s) => ['PAUSED', 'STARTED'].includes(normalizeS
 export const isMonitorAbnormal = (s) => isMonitorOffline(s) || isMonitorPaused(s)
 
 const rank = (s) => ({ UP: 0, STARTED: 1, PAUSED: 2, LOOKS_DOWN: 3, DOWN: 4 }[normalizeStatus(s)] ?? 5)
+
 const cmp = (a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true })
 
 export const sortMonitors = (list, { key = 'friendlyName', order = 'asc' } = {}) => {
@@ -70,8 +71,7 @@ function buildDailyUptimes(m) {
   const days = Array(DAYS).fill(null)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const histogram = m.lastDayUptimes?.histogram || []
-  for (const { timestamp, uptime } of histogram) {
+  for (const { timestamp, uptime } of m.lastDayUptimes?.histogram || []) {
     if (uptime == null) continue
     const ts = parseTimestamp(timestamp)
     if (!ts) continue
@@ -80,15 +80,10 @@ function buildDailyUptimes(m) {
     const age = Math.floor((today - start) / MS_DAY)
     if (age >= 0 && age < DAYS) days[DAYS - 1 - age] = Number(uptime)
   }
-  // 【修复问题1】histogram 为空/缺失时，不再伪造 30 天 100%，
-  // 避免"永远 100%"的假数据。此时 uptime 为 null，卡片会显示 "—"。
+  if (!days.some(Boolean) && isMonitorOnline(m.status)) days.fill(100)
   const valid = days.filter(num)
-  let uptime
-  if (valid.length) {
-    uptime = valid.reduce((a, b) => a + b, 0) / valid.length
-  } else {
-    uptime = null
-  }
+  const uptime = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length
+    : (isMonitorOnline(m.status) ? 100 : 0)
   return { dailyUptimes: days, uptime }
 }
 

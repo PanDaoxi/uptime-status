@@ -1,4 +1,24 @@
-<!-- 仅替换 <script setup> 中 avgUptime 计算；其余保持不变。 -->
+<template>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div v-for="(item, index) in overviewItems" :key="index"
+      class="card-base animated-border animate-fade" :class="item.containerClass"
+      @mouseenter="$event.target.classList.add('hovered')">
+      <div class="flex items-start justify-between relative">
+        <div>
+          <div class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">{{ item.label }}</div>
+          <div class="mt-2 text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <span>{{ displayValues[index] }}</span><span v-if="item.unit">{{ item.unit }}</span>
+          </div>
+          <div class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ item.desc }}</div>
+        </div>
+        <div class="p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <Icon :icon="item.icon" class="w-6 h-6 transition-colors duration-200" :class="item.iconColor" />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,7 +31,6 @@ const props = defineProps({ monitors: { type: Array, default: () => [] } })
 const total = computed(() => props.monitors.length)
 const normal = computed(() => props.monitors.filter((m) => isMonitorOnline(m.status)).length)
 const abnormal = computed(() => props.monitors.filter((m) => isMonitorAbnormal(m.status)).length)
-// 【修复问题1】仅对 uptime 有效（非 null）的监控求平均；无有效数据时显示 0
 const avgUptime = computed(() => {
   const list = props.monitors.filter((m) => m.stats?.uptime != null)
   if (!list.length) return 0
